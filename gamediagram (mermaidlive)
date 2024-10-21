@@ -1,0 +1,28 @@
+graph TD
+    A[Start] --> B{Have 100 gold};
+    B --> C{Choose Fishing Pole};
+    C --> D{Small Pole 5 gold};
+    C --> E{Medium Pole 10 gold};
+    C --> F{Big Pole 15 gold};
+    D --> G{Remaining Gold};
+    E --> G;
+    F --> G;
+    G --> H{Buy Bait};
+    H --> I{Red Bait 1 gold};
+    H --> J{Blue Bait 2 gold};
+    H --> K{Green Bait 3 gold};
+    I --> L{Update Remaining Gold};
+    J --> L;
+    K --> L;
+    L --> M{Enough Gold for More Bait?};
+    M -- Yes --> H;
+    M -- No --> N{View Today's Forecast};
+    N --> O{Fish! Automated};
+    O --> P{Calculate Earnings based on Pole, Bait, and Forecast};
+    P --> Q{Total Gold > 100?};
+    Q -- Yes --> R{Win!};
+    Q -- No --> S{Total Gold <= 100?};
+    S -- Yes --> T{Lose/Tie};
+    S -- No --> R;
+    R --> U[End];
+    T --> U;

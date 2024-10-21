@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <style>
+        body {
+            background: black;
+            color: white;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 5px;
+        }
+
+        .loading-dots span {
+            width: 8px;
+            height: 8px;
+            background-color: #fff;
+            border-radius: 50%;
+            animation: loading 0.8s infinite alternate;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes loading {
+            0% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: translateY(-8px);
+                opacity: 1;
+            }
+        }
+
+        .loading-overlay-none {
+            display: none;
+        }
+
+
+        .cartoon-button {
+            background-color: #f5b942;
+            border: 3px solid #444;
+            border-radius: 15px;
+            color: #fff;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-family: 'Comic Sans MS', cursive;
+            cursor: pointer;
+            transition: transform 0.1s ease-in-out;
+            box-shadow: -3px 3px 0 #444, -6px 6px 0 #aaa;
+        }
+
+        .cartoon-button:hover {
+            background-color: #ffcc4d;
+            transform: translate(-2px, 2px);
+            box-shadow: -2px 2px 0 #444, -4px 4px 0 #aaa;
+        }
+
+        .cartoon-button:active {
+            transform: translate(0px, 0px);
+            box-shadow: inset -2px 2px 0 #444;
+        }
+    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fishing Game</title>
+    <script defer>
+        let gold = 100;
+        let dateIncrement = 0
+        let currentStateIsFishing = false;
+        let poleSize = "";
+        let baits = [];
+
+
+        const buyBaitBtn = document.getElementById('buy-bait')
+        const buyPoleBtn = document.getElementById('buy-pole')
+
+        function getForecast() {
+            const smallFish = Math.floor(Math.random() * 16);
+            const mediumFish = Math.floor(Math.random() * 11);
+            const bigFish = Math.floor(Math.random() * 9);
+
+            const totalFish = smallFish + mediumFish + bigFish;
+            if (totalFish === 0) {
+                return { small: 0, medium: 0, big: 0, red: 0, blue: 0, green: 0 };
+            }
+
+            const redPercent = Math.floor(Math.random() * 101);
+            const bluePercent = Math.floor(Math.random() * (101 - redPercent));
+            const greenPercent = 100 - redPercent - bluePercent;
+
+            return {
+                small: smallFish,
+                medium: mediumFish,
+                big: bigFish,
+                red: redPercent / 100,
+                blue: bluePercent / 100,
+                green: greenPercent / 100,
+            };
+        }
+
+        function calculateFishPopulations(forecast) {
+            const fishPopulations = {};
+            ["small", "medium", "big"].forEach(size => {
+                ["red", "blue", "green"].forEach(color => {
+                    const fishType = `${color} ${size}`;
+                    fishPopulations[fishType] = Math.floor(forecast[size] * forecast[color]);
+                });
+            });
+            return fishPopulations;
+        }
+
+        function getFishPrice(color, size) {
+            switch (color) {
+                case "red":
+                    return size === "small" ? getRandomInt(1, 5) : size === "medium" ? getRandomInt(5, 10) : getRandomInt(10, 15);
+                case "blue":
+                    return size === "small" ? getRandomInt(3, 5) : size === "medium" ? getRandomInt(8, 10) : getRandomInt(13, 15);
+                case "green":
+                    return size === "small" ? 5 : size === "medium" ? 10 : 15;
+                default:
+                    return 0;
+            }
+        }
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+
+        function countBaitByColor(colors) {
+            const countByCategory = colors.reduce((acc, color) => {
+                acc[color] = (acc[color] || 0) + 1;
+                return acc;
+            }, {});
+
+            const formattedResult = Object.entries(countByCategory)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(', ');
+
+            return "Baits : " + formattedResult
+
+        }
+
+        function goFishing(poleSize, baits, forecast) {
+            const fishPopulations = calculateFishPopulations(forecast);
+            let earnings = 0;
+
+
+            baits.forEach((baitColor, index) => {
+
+                let caughtFish = false;
+                ["small", "medium", "big"].forEach(size => {
+                    if (!caughtFish && isPoleSizeValid(poleSize, size)) {
+                        const fishType = `${baitColor} ${size}`;
+                        if (fishPopulations[fishType] > 0) {
+                            fishPopulations[fishType]--;
+                            const fishPrice = getFishPrice(baitColor, size)
+                            addLog(`You've caught a ${fishType}, Sold for ${fishPrice}`);
+                            earnings += fishPrice;
+                            caughtFish = true;
+                        }
+                    }
+                });
+
+                // if (!caughtFish) {
+                //     ["small", "medium", "big"].forEach(size => {
+                //         if (!caughtFish && isPoleSizeValid(poleSize, size)) {
+                //             ["red", "blue", "green"].forEach(color => {
+                //                 const fishType = `${color} ${size}`;
+                //                 if (fishPopulations[fishType] > 0) {
+                //                     fishPopulations[fishType]--;
+                //                     // earnings += getFishPrice(color, size);
+                //                     caughtFish = true;
+                //                 }
+                //             });
+                //         }
+                //     });
+                // }
+            });
+
+            setTimeout(() => {
+                baits.length = 0
+                document.getElementById('bait').textContent = countBaitByColor(baits)
+            }, 4000);
+
+            return earnings;
+        }
+
+        function isPoleSizeValid(poleSize, fishSize) {
+            return poleSize === fishSize ||
+                (poleSize === "small" && fishSize === "small") ||
+                (poleSize === "medium" && fishSize === "medium") ||
+                (poleSize === "big" && fishSize === "big");
+        }
+
+        function addLog(message) {
+            const log = document.getElementById("game-log");
+            const p = document.createElement("p");
+            p.textContent = message;
+            log.appendChild(p);
+
+
+            log.scrollTo({
+                top: log.scrollHeight,
+                behavior: 'smooth'
+            });
+
+        }
+
+
+        function formatDate(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+
+
+
+        function incrementDate(date, days) {
+            const newDate = new Date(date);
+            newDate.setDate(newDate.getDate() + days);
+            return newDate;
+        }
+
+
+
+        function buyBait() {
+            const baitChoice = document.querySelector('input[name="bait"]:checked').value;
+                if (baitChoice === "red" && gold >= 1) {
+                    baits.push("red");
+                    gold = gold - 1;
+                } else if (baitChoice === "blue" && gold >= 2) {
+                    baits.push("blue");
+                    gold -= 2;
+                } else if (baitChoice === "green" && gold >= 3) {
+                    baits.push("green");
+                    gold -= 3;
+                } else {
+                    addLog("Invalid choice or not enough gold.");
+                }
+
+            document.getElementById('bait').textContent = countBaitByColor(baits)
+            updateGold(gold);
+        }
+
+        function playGame() {
+
+            const date = new Date();
+            const incrementedDate = incrementDate(date, dateIncrement);
+            const incrementedDateFormatted = formatDate(incrementedDate);
+
+            document.getElementById('buy-pole').disabled = false
+            document.getElementById('buy-bait').disabled = false
+
+            setTimeout(() => {
+                document.getElementById('habor-gif').style.display = "block";
+                document.getElementById('boat-gif').style.display = "none";
+                document.getElementById('sunset-gif').style.display = "none";
+
+            }, 500);
+
+            document.getElementById("fish").style.display = "block"
+            document.getElementById("skip").style.display = "none"
+
+            const forecast = getForecast();
+
+            addLog(`The date is ${incrementedDateFormatted}`);
+
+            const forecastNews = `Forecast today, we’re seeing ${forecast.small} small fish, ${forecast.medium} medium fish, and ${forecast.big} big fish. ${Math.round(forecast.red * 100)}% of the fish are red, ${Math.round(forecast.blue * 100)}% are blue, ${Math.round(forecast.green * 100)}% are green. `
+
+            addLog(forecastNews);
+           
+
+
+            document.getElementById("fish").addEventListener("click", () => {
+
+                if (!poleSize) {
+                    addLog('Fishing Pole have not been selected')
+
+                    return;
+                }
+
+                if (currentStateIsFishing) {
+                    return;
+                }
+
+
+                currentStateIsFishing = true;
+
+                document.getElementById('fish').disabled = true
+                document.getElementById('buy-pole').disabled = true
+                document.getElementById('buy-bait').disabled = true
+
+                let timeout = 0
+
+                if (baits.length) {
+                    document.getElementById('habor-gif').style.display = "none";
+                    document.getElementById('boat-gif').style.display = "block";
+                    document.getElementById('sunset-gif').style.display = "none";
+                    timeout = 4000
+                }
+
+
+                setTimeout(() => {
+                    document.getElementById('habor-gif').style.display = "none";
+                    document.getElementById('boat-gif').style.display = "none";
+                    document.getElementById('sunset-gif').style.display = "block";
+                }, timeout);
+
+
+                if (!baits.length) {
+                    addLog("You didn't buy any bait! You can't fish today.");
+                    addLog(`Final Gold: ${gold}`);
+                    endDay()
+                    return;
+                } else {
+                    setTimeout(() => {
+                        addLog("casting the fishing hook... ");
+                    }, 1000);
+
+
+                    setTimeout(() => {
+                        addLog("waiting for the fish to take the bait.......")
+                    }, 2000);
+
+                }
+
+
+                setTimeout(() => {
+                    const earnings = goFishing(poleSize, baits, forecast);
+                    gold += earnings;
+
+                    addLog(`Total Earnings: ${earnings}`);
+                    addLog(`Final Gold: ${gold}`);
+                    
+                    updateGold(gold)
+
+                    if (gold > 100) {
+                        addLog("You win!");
+                    } else if (gold === 100) {
+                        addLog("It's a tie!");
+                    } else {
+                        addLog("You lose!");
+                    }
+                    endDay()
+                }, timeout);
+
+
+            });
+        }
+
+        function endDay() {
+            document.getElementById('fish').disabled = false
+            addLog("The sun is setting...")
+            addLog("Please skip the day and continue fishing tomorrow")
+
+            document.getElementById("fish").style.display = "none"
+            document.getElementById("skip").style.display = "block"
+        }
+
+        function nextDay() {
+            dateIncrement++
+            currentStateIsFishing = false;
+
+            poleSize = ''
+
+            document.getElementById('selected-poleSize').textContent = 'none'
+            playGame()
+        }
+
+        function updateGold(gold) {
+            document.getElementById("gold").textContent = `Gold: ${gold}`;
+        }
+
+        function pickFishingPole() {
+            const poleChoice = document.querySelector('input[name="pole"]:checked').value;
+
+            if (poleChoice == poleSize) {
+                addLog("This pole already selected.");
+            }
+            else if (poleChoice === "small" && gold >= 5) {
+                poleSize = "small";
+                gold -= 5;
+            } else if (poleChoice === "medium" && gold >= 10) {
+                poleSize = "medium";
+                gold -= 10;
+            } else if (poleChoice === "big" && gold >= 15) {
+                poleSize = "big";
+                gold -= 15;
+            } else {
+                addLog("Invalid choice or not enough gold.");
+            }
+            document.getElementById('selected-poleSize').textContent = poleSize
+
+            updateGold(gold);
+        }
+
+        document.addEventListener("DOMContentLoaded", playGame);
+
+
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("skip").addEventListener("click",  nextDay)
+
+            document.getElementById("buy-bait").addEventListener("click", buyBait);
+
+
+            document.getElementById("buy-pole").addEventListener("click", pickFishingPole );
+
+        });
+
+
+
+    </script>
+</head>
+
+<body>
+    <h2>Fishing Game</h2>
+
+    <div style="display: flex; justify-content: center; width: 100%;">
+
+
+        <div style="width: 100">
+            <p id="gold" style="margin: 0;">Gold: 100</p>
+
+            <p id="bait" style="margin: 0; padding: 0;">no bait<p>
+                    
+            <p style="margin: 0;  padding: 0;">Selected Pole : <span id="selected-poleSize">none</span></p>
+
+            <div>
+                <h2>Choose a Fishing Pole</h2>
+                <label><input type="radio" name="pole" value="small"> Small Pole (5 gold)</label>
+                <label><input type="radio" name="pole" value="medium"> Medium Pole (10 gold)</label>
+                <label><input type="radio" name="pole" value="big"> Big Pole (15 gold)</label>
+                <div style="display: flex; justify-content: end;">
+                    <button id="buy-pole" class="cartoon-button" style="background: orange;">Rent Pole</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1%; ">
+                <h2>Buy Bait</h2>
+                <label><input type="radio" name="bait" value="red"> Red Bait (1 gold)</label>
+                <label><input type="radio" name="bait" value="blue"> Blue Bait (2 gold)</label>
+                <label><input type="radio" name="bait" value="green"> Green Bait (3 gold)</label>
+                <div style="display: flex; justify-content: end;">
+
+                    <button id="buy-bait" class="cartoon-button" style="background: orange;">Buy Bait</button>
+                </div>
+            </div>
+
+            <button id="fish" class="cartoon-button" style="background: green;">Go Fishing</button>
+            <button id="skip" style="display: none; background: pink; color: black;" class="cartoon-button">Skip
+                day</button>
+
+        </div>
+
+    </div>
+
+
+    <h2>Game Log</h2>
+    <p>Welcome to the Fishing Game!</p>
+
+
+    <div id="game-log" style="height: 150px; overflow-y: auto; border: 1px solid #ccc;"></div>
+
+    <div style="position: relative; display: flex; justify-content: center; margin-top: 10px;">
+        <img src="assets/habor.gif" alt="" style="width: 20%; height: 20%;" id="habor-gif">
+        <img src="assets/boat.gif" alt="" style="width: 20%; height: 20%; display: none;" id="boat-gif">
+        <img src="assets/sunset.gif" alt="" style="width: 20%; height: 20%; display: none;" id="sunset-gif">
+
+
+    </div>
+
+</body>
+
+</html>
